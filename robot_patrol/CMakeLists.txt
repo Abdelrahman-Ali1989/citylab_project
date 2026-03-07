@@ -33,6 +33,11 @@ ament_target_dependencies(robot_patrol
   geometry_msgs 
 )
 
+target_include_directories(robot_patrol PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 # Install executables
 install(TARGETS
   robot_patrol

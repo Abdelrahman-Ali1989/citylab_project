@@ -1,7 +1,7 @@
 
 #include "sensor_msgs/msg/detail/laser_scan__struct.hpp"
 #include <cmath>
-#include <patrol.hpp>
+#include <robot_patrol/patrol.hpp>
 
 Patrol::Patrol() : Node("plant_detector_node") {
 
@@ -32,7 +32,7 @@ Patrol::Patrol() : Node("plant_detector_node") {
 
   // create a 10Hz (100ms) wall timer that will be used to call the control loop
   patrol_timer_ = this->create_wall_timer(
-      100ms, [this]() { this->run_patrol(); }, timer_options);
+      100, [this]() { this->run_patrol(); }, timer_options);
 
   RCLCPP_INFO(this->get_logger(), "Subsicribers and publishers initialized");
 }
