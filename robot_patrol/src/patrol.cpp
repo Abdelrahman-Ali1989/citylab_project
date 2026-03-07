@@ -26,13 +26,10 @@ Patrol::Patrol() : Node("plant_detector_node") {
   cmd_vel_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>(
       "/fastbot_1/cmd_vel", 10);
 
-  // setup timer options
-  rclcpp::TimerBase::Options timer_options;
-  timer_options.callback_group = reentrant_group_1_;
-
   // create a 10Hz (100ms) wall timer that will be used to call the control loop
   patrol_timer_ = this->create_wall_timer(
-      100, [this]() { this->run_patrol(); }, timer_options);
+      std::chrono::milliseconds(100), [this]() { this->run_patrol(); },
+      reentrant_group_1_);
 
   RCLCPP_INFO(this->get_logger(), "Subsicribers and publishers initialized");
 }

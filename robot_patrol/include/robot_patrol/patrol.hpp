@@ -26,6 +26,9 @@ private:
   // publishers
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
 
+  // Callback groups
+  rclcpp::CallbackGroup::SharedPtr reentrant_group_1_;
+
   // timer for 10 Hz patrol loop
   rclcpp::TimerBase::SharedPtr patrol_timer_;
 
