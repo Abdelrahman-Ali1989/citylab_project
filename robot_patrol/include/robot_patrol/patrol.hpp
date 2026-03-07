@@ -16,10 +16,22 @@ public:
   ~Patrol();
 
 private:
+  // functions
   void laserscan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
+  void publish_velocity(double linear, double angular);
+  void run_patrol();
+
+  // subscribers
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       laserscan_subscription_;
+
+  // publishers
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
 
-  float direction_;
+  // timer for 10 Hz patrol loop
+  rclcpp::TimerBase::SharedPtr patrol_timer_;
+
+  // variables
+  double direction_;
+  float front_range_;
 };
