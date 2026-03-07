@@ -3,6 +3,7 @@
 #include <cmath>
 #include <robot_patrol/patrol.hpp>
 
+// The constructor definition
 Patrol::Patrol() : Node("plant_detector_node") {
 
   // Create a reentrant callback group
@@ -34,13 +35,18 @@ Patrol::Patrol() : Node("plant_detector_node") {
   RCLCPP_INFO(this->get_logger(), "Subsicribers and publishers initialized");
 }
 
+// The destructor
 Patrol::~Patrol() {}
 
+// The laserscan callback function
 void Patrol::laserscan_callback(
     const sensor_msgs::msg::LaserScan::SharedPtr msg) {
 
   double start_angle = -M_PI / 2.0;
   double end_angle = M_PI / 2.0;
+
+  double left_corner_angle = -M_PI / 4.0; // corner angle is 45 degrees
+  double right_corner_angle = M_PI / 4.0; // corner angle is 45 degrees
 
   int start_index = static_cast<int>(
       std::ceil((start_angle - msg->angle_min) / msg->angle_increment));
@@ -48,8 +54,17 @@ void Patrol::laserscan_callback(
       std::floor((end_angle - msg->angle_min) / msg->angle_increment));
   int front_index = static_cast<int>(
       std::floor((0.0 - msg->angle_min) / msg->angle_increment));
+  int left_corner_index = static_cast<int>(
+      std::ceil((left_corner_angle - msg->angle_min) / msg->angle_increment));
+  int right_corner_index = static_cast<int>(
+      std::floor((right_corner_angle - msg->angle_min) / msg->angle_increment));
 
+  /* determine range in front of the robot (surrounding) that can be used
+     to decide avoidance motion
+  */
   front_range_ = msg->ranges[front_index];
+  left_corner_range_ = msg->ranges[left_corner_index];
+  right_corner_range_ = msg->ranges[right_corner_index];
 
   float max_range = -1;
   int index_of_max_range = -1;
@@ -99,6 +114,10 @@ void Patrol::run_patrol() {
   */
   if (front_range_ < 0.35) {
     angular_vel = direction_ / 2.0;
+  } else if (right_corner_range_ < 0.35) {
+    angular_vel = direction_ / 4.0;
+  } else if (left_corner_range_ < 0.35) {
+    angular_vel = direction_ / -4.0;
   } else {
     angular_vel = 0.0;
   }

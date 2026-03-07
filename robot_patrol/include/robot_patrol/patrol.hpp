@@ -35,4 +35,6 @@ private:
   // variables
   double direction_;
   float front_range_;
+  float left_corner_range_;
+  float right_corner_range_;
 };
