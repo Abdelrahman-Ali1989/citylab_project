@@ -4,7 +4,7 @@
 #include <robot_patrol/patrol.hpp>
 
 // The constructor definition
-Patrol::Patrol() : Node("plant_detector_node") {
+Patrol::Patrol() : Node("robot_patrol_node") {
 
   // Create a reentrant callback group
   reentrant_group_1_ =
@@ -17,15 +17,15 @@ Patrol::Patrol() : Node("plant_detector_node") {
   // Create subscription for laser scan data with reentrant callback group
   laserscan_subscription_ =
       this->create_subscription<sensor_msgs::msg::LaserScan>(
-          "/fastbot_1/scan", 10,
+          "/scan", 10,
           [this](const sensor_msgs::msg::LaserScan::SharedPtr msg) {
             this->laserscan_callback(msg);
           },
           sub_options);
 
   // Create publisher for velocity commands
-  cmd_vel_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>(
-      "/fastbot_1/cmd_vel", 10);
+  cmd_vel_publisher_ =
+      this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
 
   // create a 10Hz (100ms) wall timer that will be used to call the control loop
   patrol_timer_ = this->create_wall_timer(
@@ -96,34 +96,60 @@ void Patrol::laserscan_callback(
   } else {
     RCLCPP_WARN(this->get_logger(), "No valid laser readings found");
   }
+
+  RCLCPP_INFO(this->get_logger(), "Reading laser sensor data...");
 }
 
 void Patrol::publish_velocity(double linear, double angular) {
   auto vel_msg = geometry_msgs::msg::Twist();
+
+  // components with always zero values
+  vel_msg.linear.y = 0.0;
+  vel_msg.linear.z = 0.0;
+  vel_msg.angular.x = 0.0;
+  vel_msg.angular.y = 0.0;
+
+  // control dynamic value components
   vel_msg.linear.x = linear;
   vel_msg.angular.z = angular;
   cmd_vel_publisher_->publish(vel_msg);
+
+  RCLCPP_INFO(this->get_logger(), "Velocity published...");
 }
 
 void Patrol::run_patrol() {
 
-  double angular_vel, linear_vel = 0.1;
+  double angular_vel, linear_vel = 0.05;
 
   /* If there is an obstacle, let angular_vel get the direction angle value
     divided by 2, otherwise angular_vel should be zero (always heading forward)
   */
-  if (front_range_ < 0.35) {
+
+  if ((front_range_ < 0.45) && (right_corner_range_ < left_corner_range_)) {
+    angular_vel = direction_ / -2.0;
+  } else if ((front_range_ < 0.45) &&
+             (left_corner_range_ < right_corner_range_)) {
     angular_vel = direction_ / 2.0;
-  } else if (right_corner_range_ < 0.35) {
-    angular_vel = direction_ / 4.0;
-  } else if (left_corner_range_ < 0.35) {
-    angular_vel = direction_ / -4.0;
+  } else if (front_range_ < 0.45) {
+    angular_vel = direction_ / 2.0;
+    linear_vel = -0.1;
   } else {
     angular_vel = 0.0;
   }
 
+  /*
+    if (right_corner_range_ < 0.35) {
+      angular_vel = direction_ / 2.0;
+    }
+    if (left_corner_range_ < 0.35) {
+      angular_vel = direction_ / -2.0;
+    }
+    */
+
   // publish velocity commands
   publish_velocity(linear_vel, angular_vel);
+
+  RCLCPP_INFO(this->get_logger(), "Main Control Loop Running...");
 }
 
 int main(int argc, char *argv[]) {
