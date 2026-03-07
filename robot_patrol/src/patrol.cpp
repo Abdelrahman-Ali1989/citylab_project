@@ -1,4 +1,3 @@
-
 #include "sensor_msgs/msg/detail/laser_scan__struct.hpp"
 #include <cmath>
 #include <robot_patrol/patrol.hpp>
@@ -17,15 +16,15 @@ Patrol::Patrol() : Node("robot_patrol_node") {
   // Create subscription for laser scan data with reentrant callback group
   laserscan_subscription_ =
       this->create_subscription<sensor_msgs::msg::LaserScan>(
-          "/scan", 10,
+          "/fastbot_1/scan", 10,
           [this](const sensor_msgs::msg::LaserScan::SharedPtr msg) {
             this->laserscan_callback(msg);
           },
           sub_options);
 
   // Create publisher for velocity commands
-  cmd_vel_publisher_ =
-      this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
+  cmd_vel_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>(
+      "/fastbot_1/cmd_vel", 10);
 
   // create a 10Hz (100ms) wall timer that will be used to call the control loop
   patrol_timer_ = this->create_wall_timer(
@@ -45,8 +44,8 @@ void Patrol::laserscan_callback(
   double start_angle = -M_PI / 2.0;
   double end_angle = M_PI / 2.0;
 
-  double left_corner_angle = -M_PI / 4.0; // corner angle is 45 degrees
-  double right_corner_angle = M_PI / 4.0; // corner angle is 45 degrees
+  double left_corner_angle = -2 * M_PI / 3.0; // corner angle is 45 degrees
+  double right_corner_angle = 2 * M_PI / 3.0; // corner angle is 45 degrees
 
   int start_index = static_cast<int>(
       std::ceil((start_angle - msg->angle_min) / msg->angle_increment));
@@ -125,16 +124,26 @@ void Patrol::run_patrol() {
     divided by 2, otherwise angular_vel should be zero (always heading forward)
   */
 
-  if ((front_range_ < 0.45) && (right_corner_range_ < left_corner_range_)) {
+  if ((front_range_ < 0.35) && (right_corner_range_ < left_corner_range_)) {
     angular_vel = direction_ / -2.0;
-  } else if ((front_range_ < 0.45) &&
+  } else if ((front_range_ < 0.35) &&
              (left_corner_range_ < right_corner_range_)) {
     angular_vel = direction_ / 2.0;
-  } else if (front_range_ < 0.45) {
-    angular_vel = direction_ / 2.0;
-    linear_vel = -0.1;
   } else {
     angular_vel = 0.0;
+  }
+
+  if ((right_corner_range_ < 0.15) &&
+      (right_corner_range_ < left_corner_range_)) {
+    angular_vel = direction_ / -4.0;
+  } else if ((left_corner_range_ < 0.15) &&
+             (left_corner_range_ < right_corner_range_)) {
+    angular_vel = direction_ / 4.0;
+  }
+
+  if (front_range_ < 0.2) {
+    angular_vel = direction_ / 2.0;
+    linear_vel = -0.2;
   }
 
   /*
