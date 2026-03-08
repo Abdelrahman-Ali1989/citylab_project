@@ -118,42 +118,24 @@ void Patrol::publish_velocity(double linear, double angular) {
 
 void Patrol::run_patrol() {
 
-  double angular_vel, linear_vel = 0.05;
+  double angular_vel, linear_vel = 0.1;
 
   /* If there is an obstacle, let angular_vel get the direction angle value
     divided by 2, otherwise angular_vel should be zero (always heading forward)
   */
 
-  if ((front_range_ < 0.35) && (right_corner_range_ < left_corner_range_)) {
-    angular_vel = direction_ / -2.0;
-  } else if ((front_range_ < 0.35) &&
-             (left_corner_range_ < right_corner_range_)) {
+  if (front_range_ < 0.35) {
     angular_vel = direction_ / 2.0;
+  } else if (left_corner_range_ < 0.2 || right_corner_range_ < 0.2) {
+    angular_vel = direction_ / 20.0;
   } else {
     angular_vel = 0.0;
   }
 
-  if ((right_corner_range_ < 0.15) &&
-      (right_corner_range_ < left_corner_range_)) {
-    angular_vel = direction_ / -4.0;
-  } else if ((left_corner_range_ < 0.15) &&
-             (left_corner_range_ < right_corner_range_)) {
-    angular_vel = direction_ / 4.0;
-  }
-
-  if (front_range_ < 0.2) {
+  if (front_range_ < 0.15) {
     angular_vel = direction_ / 2.0;
     linear_vel = -0.2;
   }
-
-  /*
-    if (right_corner_range_ < 0.35) {
-      angular_vel = direction_ / 2.0;
-    }
-    if (left_corner_range_ < 0.35) {
-      angular_vel = direction_ / -2.0;
-    }
-    */
 
   // publish velocity commands
   publish_velocity(linear_vel, angular_vel);
