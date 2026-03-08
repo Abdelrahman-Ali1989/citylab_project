@@ -75,10 +75,6 @@ void Patrol::laserscan_callback(
   int index_of_max_range = -1;
 
   for (int i = start_index; i <= end_index; i++) {
-    if (i > angle_90_index) {
-      // ignore the indices from >90 degrees to <270 degrees
-      i = angle_270_index;
-    }
 
     float range = msg->ranges[i];
 
@@ -97,6 +93,11 @@ void Patrol::laserscan_callback(
     if (range > max_range) {
       max_range = range;
       index_of_max_range = i;
+    }
+
+    if (i == angle_90_index) {
+      // ignore the indices from >90 degrees to <270 degrees
+      i = angle_270_index;
     }
   }
 
@@ -143,8 +144,6 @@ void Patrol::run_patrol() {
 
   if (front_range_ < 0.35) {
     angular_vel = direction_ / 2.0;
-  } else if (left_corner_range_ < 0.2 || right_corner_range_ < 0.2) {
-    angular_vel = direction_ / 20.0;
   } else {
     angular_vel = 0.0;
   }
