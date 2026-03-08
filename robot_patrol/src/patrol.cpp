@@ -42,15 +42,21 @@ void Patrol::laserscan_callback(
     const sensor_msgs::msg::LaserScan::SharedPtr msg) {
 
   double start_angle = 0.0;
-  double end_angle = 2 * M_PI / 2.0;
+  double angle_90 = M_PI / 2.0;
+  double angle_270 = 3 * M_PI / 2.0;
+  double end_angle = 2 * M_PI;
 
-  double left_corner_angle = 4 * M_PI / 3.0;  // corner angle is 45 degrees
-  double right_corner_angle = 2 * M_PI / 3.0; // corner angle is 45 degrees
+  double left_corner_angle = 4 * M_PI / 3.0;  // corner angle is 300 degrees
+  double right_corner_angle = 2 * M_PI / 3.0; // corner angle is 60 degrees
 
   int start_index = static_cast<int>(
       std::ceil((start_angle - msg->angle_min) / msg->angle_increment));
   int end_index = static_cast<int>(
       std::floor((end_angle - msg->angle_min) / msg->angle_increment));
+  int angle_90_index = static_cast<int>(
+      std::ceil((angle_90 - msg->angle_min) / msg->angle_increment));
+  int angle_270_index = static_cast<int>(
+      std::floor((angle_270 - msg->angle_min) / msg->angle_increment));
   int front_index = static_cast<int>(
       std::floor((0.0 - msg->angle_min) / msg->angle_increment));
   int left_corner_index = static_cast<int>(
@@ -69,6 +75,11 @@ void Patrol::laserscan_callback(
   int index_of_max_range = -1;
 
   for (int i = start_index; i <= end_index; i++) {
+    if (i > angle_90_index) {
+      // ignore the indices from >90 degrees to <270 degrees
+      i = angle_270_index;
+    }
+
     float range = msg->ranges[i];
 
     // ignore inf values
@@ -90,8 +101,14 @@ void Patrol::laserscan_callback(
   }
 
   // calculate the angle of the furthest range value
-  if (index_of_max_range >= 0) {
+  if ((index_of_max_range >= start_index) &&
+      (index_of_max_range <= angle_90_index)) {
     direction_ = (index_of_max_range * msg->angle_increment) + msg->angle_min;
+  } else if ((index_of_max_range >= angle_270_index) &&
+             (index_of_max_range <= end_index)) {
+    // normalize to negative angles if angle is 270 to 360, by subtracting 2*pi
+    direction_ = (index_of_max_range * msg->angle_increment) + msg->angle_min -
+                 (2 * M_PI);
   } else {
     RCLCPP_WARN(this->get_logger(), "No valid laser readings found");
   }
@@ -118,43 +135,24 @@ void Patrol::publish_velocity(double linear, double angular) {
 
 void Patrol::run_patrol() {
 
-  double angular_vel, linear_vel = 0.01;
+  double angular_vel, linear_vel = 0.1;
 
   /* If there is an obstacle, let angular_vel get the direction angle value
     divided by 2, otherwise angular_vel should be zero (always heading forward)
   */
 
-  if ((front_range_ < 0.35) && (right_corner_range_ < left_corner_range_)) {
-    angular_vel = direction_ / -8.0;
-  } else if ((front_range_ < 0.35) &&
-             (left_corner_range_ < right_corner_range_)) {
-    angular_vel = direction_ / 8.0;
+  if (front_range_ < 0.35) {
+    angular_vel = direction_ / 2.0;
+  } else if (left_corner_range_ < 0.2 || right_corner_range_ < 0.2) {
+    angular_vel = direction_ / 20.0;
   } else {
     angular_vel = 0.0;
   }
 
-  if ((right_corner_range_ < 0.15) &&
-      (right_corner_range_ < left_corner_range_)) {
-    angular_vel = direction_ / -16.0;
-  }
-  if ((left_corner_range_ < 0.15) &&
-      (left_corner_range_ < right_corner_range_)) {
-    angular_vel = direction_ / 16.0;
-  }
-
   if (front_range_ < 0.2) {
     angular_vel = direction_ / 2.0;
-    linear_vel = -0.1;
+    linear_vel = -0.2;
   }
-
-  /*
-    if (right_corner_range_ < 0.35) {
-      angular_vel = direction_ / 2.0;
-    }
-    if (left_corner_range_ < 0.35) {
-      angular_vel = direction_ / -2.0;
-    }
-    */
 
   // publish velocity commands
   publish_velocity(linear_vel, angular_vel);
